@@ -1,0 +1,55 @@
+/* Dashboard styling */
+.stMetric {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Policy viewer styling */
+.policy-content {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e9ecef;
+}
+
+/* Search results styling */
+.search-result {
+    margin: 1rem 0;
+    padding: 1rem;
+    border-left: 4px solid #007bff;
+    background-color: #f8f9fa;
+}
+
+/* General styling */
+.stButton button {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.stSelectbox {
+    margin-bottom: 1rem;
+}
+
+/* Form styling */
+.stForm {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Table styling */
+.dataframe {
+    width: 100%;
+    margin: 1rem 0;
+}
+
+/* Chart styling */
+.plotly-chart {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
