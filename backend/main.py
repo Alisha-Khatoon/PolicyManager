@@ -1,7 +1,7 @@
 # backend/main.py
 
 from fastapi import FastAPI
-from routers import policy
+from backend.routers import policy
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
