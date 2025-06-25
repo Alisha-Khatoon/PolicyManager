@@ -2,6 +2,7 @@
 
 This is a full-stack enterprise-grade **Policy Management & Compliance Review System** built using **React (Vite)** on the frontend and **FastAPI** on the backend. It allows enterprises to **log in via Google**, upload policy documents (PDFs), and receive **AI-powered compliance analysis** aligned with current Indian government standards (e.g., RTI, MSME guidelines).
 
+
 ## 🚀 Features
 
 - 🔐 **Secure Google Login**
@@ -13,6 +14,7 @@ This is a full-stack enterprise-grade **Policy Management & Compliance Review Sy
 - 📄 **Content & Rule Analysis View**
 - 📊 Smart dashboard (coming soon)
 
+
 ## 🔍 Use Case
 
 This tool is especially useful for **enterprises**, **HR/legal teams**, and **MSMEs** that need to:
@@ -21,27 +23,29 @@ This tool is especially useful for **enterprises**, **HR/legal teams**, and **MS
 - Quickly assess compliance gaps
 - Improve policy quality with AI suggestions
 
+
 ## 🖼️ App Screenshots
 
 ### 🔐 1. Google OAuth Login
 
-![Login Screen](./frontend/public/assets/login.png)
+![Login Screen](./frontend/src/assets/login.png)
 
 ### 📤 2. Upload Policy Interface
 
-![Upload Policy](./frontend/public/assets/upload-policy.png)
+![Upload Policy](./frontend/src/assets/upload-policy.png)
 
 ### 📄 3. Document View & Tabbed Analysis
 
-![Tabbed View](./frontend/public/assets/content-tabs.png)
+![Tabbed View](./frontend/src/assets/content-tabs.png)
 
 ### 📊 4. AI Review with Compliance Score
 
-![Compliance Score](./frontend/public/assets/compliance-review.png)
+![Compliance Score](./frontend/src/assets/compliance-review.png)
 
 ### 📁 5. My Policies Dashboard
 
-![My Policies](./frontend/public/assets/my-policies.png)
+![My Policies](./frontend/src/assets/my-policies.png)
+
 
 ## 🛠 Tech Stack
 
@@ -51,6 +55,7 @@ This tool is especially useful for **enterprises**, **HR/legal teams**, and **MS
 **AI Integration:** Gemini / LLM APIs  
 **Storage:** SQLAlchemy, UUID file naming  
 **Deployment Ready:** Docker + Production builds planned
+
 
 ## 📦 Local Development
 
@@ -62,4 +67,3 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload
-```
