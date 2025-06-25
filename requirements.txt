@@ -1,0 +1,38 @@
+# FastAPI core
+fastapi
+uvicorn[standard]
+
+# Database
+SQLAlchemy
+psycopg2-binary
+
+# Pydantic
+pydantic
+
+# File parsing
+python-docx
+pdfminer.six
+
+# Google OAuth
+google-auth
+google-auth-oauthlib
+
+# AI/LLM logic
+openai
+protobuf
+tiktoken
+
+# Misc
+python-multipart
+python-dotenv
+
+# If you use Alembic for migrations
+alembic
+
+# Optional (used by your app for UUID, date handling, etc.)
+python-jose
+fastapi>=0.68.0
+python-jose[cryptography]>=3.3.0
+python-dotenv>=0.19.0
+google-auth-oauthlib>=0.4.6
+uvicorn>=0.15.0

@@ -1,95 +1,137 @@
-from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from typing import List
-import os, json
-
-from backend.utils.file_processing import extract_text_from_pdf, extract_text_from_docx
-from backend.analyzer.rule_checker import rule_based_analysis
-from backend.analyzer.gemini_checker import ai_compliance_check
-from backend.db.session import SessionLocal
-from backend.schemas.policy import PolicyOut, PolicyDetailOut
+from backend.db.session import get_db
 from backend.models.policy import Policy
+from backend.analyzer.insight_extractor import parse_ai_review
+from backend.analyzer.rule_checker import rule_based_analysis
+from backend.analyzer.compliance.comparator import PolicyComparator
+from backend.analyzer.category_classifier import classify_policy_type
+from backend.analyzer.industry_classifier import detect_industry
+from backend.core.config import settings
+from backend.models.auth import User
+import uuid
+import os
+from typing import List
+from backend.services.gemini import GeminiService # Ensure this import is present
 
 router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-UPLOAD_DIR = "uploaded_files"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-
-# ✅ DB session dependency
-def get_db():
-    db = SessionLocal()
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
-        yield db
-    finally:
-        db.close()
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+@router.post("/upload-multiple")
+async def upload_multiple_policies(files: List[UploadFile], db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    uploaded_policies_info = []
+    gemini_service = GeminiService() # Instantiate GeminiService
+
+    for file in files:
+        try:
+            os.makedirs("uploads", exist_ok=True)
+            
+            file_path = f"uploads/{file.filename}"
+            with open(file_path, "wb") as buffer:
+                buffer.write(await file.read())
+            
+            with open(file_path, "r", errors="ignore") as f:
+                policy_text = f.read()
+            
+            policy_id = str(uuid.uuid4())
+            
+            # --- START of changed AI Review logic ---
+            # Generate AI review using GeminiService directly
+            ai_review_prompt = (
+                "Provide a comprehensive review and key insights for the following policy text, "
+                "focusing on its clarity, scope, and potential implications. "
+                "Also, suggest categories and industry based on its content. "
+                "Return the response in a structured JSON format with fields like 'review', 'insights', 'category', 'industry'. "
+                "Example: {'review': '...', 'insights': '...', 'category': '...', 'industry': '...'}\n\n"
+                f"Policy Text:\n{policy_text}"
+            )
+            ai_review_raw = await gemini_service.generate(ai_review_prompt)
+            # Assuming parse_ai_review can handle the structured JSON string from ai_review_raw
+            ai_review = parse_ai_review(ai_review_raw) 
+            # --- END of changed AI Review logic ---
+
+            rule_results = rule_based_analysis(policy_text) # This will need policy_text directly
+
+            # Re-classify category and industry if parse_ai_review doesn't provide them,
+            # or use values from ai_review if parse_ai_review extracts them
+            category = ai_review.get("category", classify_policy_type(policy_text))
+            industry = ai_review.get("industry", detect_industry(policy_text))
+
+            policy = Policy(
+                id=policy_id,
+                filename=file.filename,
+                ai_review=ai_review, # Ensure this matches your DB model's type (e.g., JSONB)
+                insights=rule_results, # Ensure this matches your DB model's type (e.g., JSONB)
+                category=category,
+                industry=industry,
+                user_id=user.id
+            )
+            
+            db.add(policy)
+            db.commit()
+            db.refresh(policy)
+
+            uploaded_policies_info.append({
+                "message": f"Policy '{file.filename}' uploaded successfully",
+                "policy_id": policy_id,
+                "filename": file.filename
+            })
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error processing file '{file.filename}': {str(e)}"
+            )
+    
+    return {"message": "Upload process completed", "uploaded_files": uploaded_policies_info}
 
 
-# ✅ Upload route
-@router.post("/upload")
-async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-
-    # Save uploaded file
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
-
-    # Extract text from supported formats
-    file_ext = file.filename.split(".")[-1].lower()
-    if file_ext == "pdf":
-        extracted_text = extract_text_from_pdf(file_path)
-    elif file_ext == "docx":
-        extracted_text = extract_text_from_docx(file_path)
-    else:
-        return {"error": "Unsupported file type"}
-
-    if not extracted_text:
-        return {"error": "Failed to extract text from file"}
-
-    # Run analyses
-    analysis_result = rule_based_analysis(extracted_text)
-    ai_review = ai_compliance_check(extracted_text)
-
-    # Save to database
-    new_policy = Policy(
-        filename=file.filename,
-        size=os.path.getsize(file_path),
-        content=extracted_text,
-        analysis=json.dumps(analysis_result),
-        ai_review=ai_review,
-    )
-    db.add(new_policy)
-    db.commit()
-    db.refresh(new_policy)
-
-    return {
-        "filename": new_policy.filename,
-        "size": new_policy.size,
-        "analysis": analysis_result,
-        "ai_review": ai_review,
-        "preview_text": extracted_text[:1000]
-    }
+@router.get("/enterprise/policies")
+async def get_enterprise_policies(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    policies = db.query(Policy).filter(Policy.user_id == user.id).all()
+    return policies
 
 
-# ✅ Get all policies
-@router.get("/", response_model=List[PolicyOut])
-def get_all_policies(db: Session = Depends(get_db)):
-    return db.query(Policy).order_by(Policy.uploaded_at.desc()).all()
-
-
-# ✅ Get single policy details
-@router.get("/{policy_id}", response_model=PolicyDetailOut)
-def get_policy_by_id(policy_id: int, db: Session = Depends(get_db)):
-    policy = db.query(Policy).filter(Policy.id == policy_id).first()
+@router.get("/policy/{policy_id}")
+async def get_policy(policy_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    policy = db.query(Policy).filter(Policy.id == policy_id, Policy.user_id == user.id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
-
     return {
         "id": policy.id,
         "filename": policy.filename,
-        "size": policy.size,
-        "uploaded_at": policy.uploaded_at,
-        "content": policy.content,
-        "analysis": json.loads(policy.analysis),
         "ai_review": policy.ai_review,
+        "insights": policy.insights,
+        "category": policy.category,
+        "industry": policy.industry
     }
+
+@router.post("/compare")
+async def compare_policies(policy_id: str, gov_policy_text: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    policy = db.query(Policy).filter(Policy.id == policy_id, Policy.user_id == user.id).first()
+    if not policy:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    comparator = PolicyComparator()
+    # The 'raw' key might not exist if parse_ai_review doesn't create it,
+    # or if ai_review is directly the parsed object.
+    # It might be better to store the original policy_text in the DB if needed for comparison.
+    comparison = comparator.compare_with_government(policy_text=policy.ai_review.get("raw", ""), gov_policy_text=gov_policy_text)
+    return {"comparison": comparison}
+
+# Global comparator instance (simplified for now)
+comparator = PolicyComparator()

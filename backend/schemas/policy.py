@@ -1,16 +1,21 @@
 from pydantic import BaseModel
+from typing import Optional, Dict, Any
 from datetime import datetime
-from typing import Optional
+
+class TokenSchema(BaseModel):
+    access_token: str
+    token_type: str
 
 class PolicyOut(BaseModel):
     id: int
     filename: str
-    size: int
     uploaded_at: datetime
+    category: Optional[str]
+    industry: Optional[str]
 
-    model_config = {
-        "from_attributes": True
-    }
+    class Config:
+        from_attributes  = True
+
 
 class PolicyDetailOut(BaseModel):
     id: int
@@ -18,9 +23,11 @@ class PolicyDetailOut(BaseModel):
     size: int
     uploaded_at: datetime
     content: str
-    analysis: dict[str, str]
+    analysis: Dict[str, str]
     ai_review: Optional[str]
+    insights: Optional[Dict[str, Any]]
+    category: Optional[str]
+    industry: Optional[str]  # ✅ recently added
 
     class Config:
-        form_mode = True
-
+        from_attributes  = True

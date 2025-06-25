@@ -44,3 +44,32 @@
   margin-bottom: 1rem;
   line-height: 1.6;
 }
+.logout-button {
+  background-color: #ef4444; /* Tailwind bg-red-500 */
+  color: #fff; /* Tailwind text-white */
+  padding-left: 0.75rem; /* Tailwind px-3 */
+  padding-right: 0.75rem;
+  padding-top: 0.25rem; /* Tailwind py-1 */
+  padding-bottom: 0.25rem;
+  border-radius: 0.25rem; /* Tailwind rounded */
+  font-size: 0.875rem; /* Tailwind text-sm */
+  transition: background-color 0.2s;
+}
+.logout-button:hover {
+  background-color: #dc2626; /* Tailwind hover:bg-red-600 */
+}
+
+.policy-item {
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+.policy-item:hover {
+  border-color: #bfdbfe;
+}
+.policy-item:hover {
+  background-color: #f9fafb;
+}
+
+.policy-item:hover {
+  border-color: #bfdbfe; /* Tailwind border-blue-200 */
+}}
